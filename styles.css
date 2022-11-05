@@ -1,0 +1,144 @@
+h1{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+h2{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+h3{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+h4{
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.three-canvas {
+  position: static;
+  top: 0;
+  left: 0;
+  outline: none;
+  outline-style: solid;
+  background-image: url('https://images.pexels.com/photos/53594/blue-clouds-day-fluffy-53594.jpeg?cs=srgb&dl=pexels-pixabay-53594.jpg&fm=jpg');
+}
+
+.file-input {
+  z-index: 1;
+  position: absolute;
+}
+
+.topbar{
+    width: 100%;
+    height: 60px;
+    background-color: #A0BCC2;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    box-shadow: 0 4px 2px -2px gray;
+}
+
+.topbarWrapper{
+    height: 100%;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.topbarIcon {
+  width: 30px;
+  height: auto;
+  border-radius: 50%;
+  border-width: medium;
+  border-style: solid;
+  border-color: #FEFBE7;
+}
+
+.topLeft{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plytecLogo{
+  height: 50px;
+  padding-left: 30px;
+}
+
+.container{
+  background-color: #f5ebf7;
+  display: flex;
+  height: 100%
+}
+
+.sidebar{
+  flex: 1;
+  height: calc(100vh - 60px);
+  background-color: rgb(237, 237, 253);
+  position:sticky;
+  top:50px;
+  box-shadow: 8px 2px 37px 12px rgba(0,0,0,0.43);
+  -webkit-box-shadow: 8px 2px 37px 12px rgba(0,0,0,0.43);
+  -moz-box-shadow: 8px 2px 37px 12px rgba(0,0,0,0.43);
+}
+
+.sidebarWrapper{
+    padding: 10px;
+    color: #555;
+}
+
+.sidebarMenu{
+    margin-bottom: 10px;
+}
+
+.sidebarTitle{
+    font-size: 18px;
+    color:rgb(187, 186, 186)
+}
+
+.sidebarList{
+    list-style: none;
+    padding: 5px;
+}
+
+.sidebarListItem{
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+}
+
+.sidebarListItem.active,
+.sidebarListItem:hover {
+    background-color: rgb(228, 228, 250);
+}
+
+.sidebarIcon{
+    margin-right:5px;
+    font-size: 20px !important;
+}
+
+.viewer{
+  flex: 5;
+  margin: 10px;
+}
+
+.three-canvas{
+  align-items: center;
+}
+
+.icons {
+  margin-right: 10px;
+  height : 30px;
+  width: auto;
+}
