@@ -104307,7 +104307,6 @@ window.addEventListener("resize", () => {
   renderer.setSize(size.width, size.height);
 });
 
-
 // Sets up the IFC loading
 const ifcLoader = new IFCLoader();
 ifcLoader.ifcManager.setWasmPath("../wasm/");
@@ -104315,13 +104314,14 @@ ifcLoader.ifcManager.setWasmPath("../wasm/");
 // Load ifc file from local
 ifcLoader.load("models/example.ifc", (ifcModel) => scene.add(ifcModel));
 
-// const input = document.getElementById("file-input");
-// input.addEventListener(
-//   "change",
-//   (changed) => {
-//     const file = changed.target.files[0];
-//     var ifcURL = URL.createObjectURL(file);
-//     ifcLoader.load(ifcURL, (ifcModel) => scene.add(ifcModel));
-//   },
-//   false
-// );
+// Load ifc file from input button
+const input = document.getElementById("file-input");
+input.addEventListener(
+  "change",
+  (changed) => {
+    const file = changed.target.files[0];
+    var ifcURL = URL.createObjectURL(file);
+    ifcLoader.load(ifcURL, (ifcModel) => scene.add(ifcModel));
+  },
+  false
+);
