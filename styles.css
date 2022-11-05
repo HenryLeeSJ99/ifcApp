@@ -71,7 +71,12 @@ body {
 
 .plytecLogo{
   height: 50px;
-  padding-left: 30px;
+  padding: 0px 30px;
+}
+
+.ownerDescription{
+  margin: 0px;
+  padding: 0px 30px;
 }
 
 .container{
@@ -92,45 +97,45 @@ body {
 }
 
 .sidebarWrapper{
-    padding: 10px;
-    color: #555;
+  padding: 10px;
+  color: #555;
 }
 
 .sidebarMenu{
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
 .sidebarTitle{
-    font-size: 18px;
-    color:rgb(187, 186, 186)
+  font-size: 18px;
+  color:rgb(187, 186, 186)
 }
 
 .sidebarList{
-    list-style: none;
-    padding: 5px;
+  list-style: none;
+  padding: 5px;
 }
 
 .sidebarListItem{
-    padding: 5px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    border-radius: 10px;
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
 }
 
 .sidebarListItem.active,
 .sidebarListItem:hover {
-    background-color: rgb(228, 228, 250);
+  background-color: rgb(228, 228, 250);
 }
 
 .sidebarIcon{
-    margin-right:5px;
-    font-size: 20px !important;
+  margin-right:5px;
+  font-size: 20px !important;
 }
 
 .viewer{
-  flex: 5;
-  margin: 10px;
+flex: 5;
+margin: 10px;
 }
 
 .three-canvas{

@@ -1,6 +1,8 @@
 import { AmbientLight, AxesHelper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { IFCLoader } from "web-ifc-three/IFCLoader";
+import { Raycaster, Vector2, MeshLambertMaterial } from "three";
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree} from "three-mesh-bvh";
 
 //Creates the Three.js scene
 const scene = new Scene();
@@ -74,10 +76,19 @@ window.addEventListener("resize", () => {
 
 // Sets up the IFC loading
 const ifcLoader = new IFCLoader();
-ifcLoader.ifcManager.setWasmPath("../wasm/");
+ifcLoader.ifcManager.setupThreeMeshBVH(computeBoundsTree, disposeBoundsTree, acceleratedRaycast); // Sets up optimized picking
+const ifcModels = []; // Container to store the IFC models
+
+async function loadIFC(ifcPath){
+  await ifcLoader.ifcManager.setWasmPath("../wasm/");
+  ifcLoader.load(ifcPath, (ifcModel) => {
+    ifcModels.push(ifcModel);
+    scene.add(ifcModel);
+  })
+}
 
 // Load ifc file from local
-ifcLoader.load("models/example.ifc", (ifcModel) => scene.add(ifcModel));
+loadIFC("models/example.ifc");
 
 // Load ifc file from input button
 const input = document.getElementById("file-input");
@@ -86,7 +97,85 @@ input.addEventListener(
   (changed) => {
     const file = changed.target.files[0];
     var ifcURL = URL.createObjectURL(file);
-    ifcLoader.load(ifcURL, (ifcModel) => scene.add(ifcModel));
+    loadIFC(ifcURL);
   },
   false
 );
+
+// Create a function for the Raycaster to cast rays, calculating the position of the mouse on the screen
+const raycaster = new Raycaster();
+raycaster.firstHitOnly = true;
+const mouse = new Vector2();
+
+function cast(event) {
+  // Computes the position of the mouse on the screen
+  const bounds = threeCanvas.getBoundingClientRect();
+
+  const x1 = event.clientX - bounds.left;
+  const x2 = bounds.right - bounds.left;
+  mouse.x = (x1 / x2) * 2 - 1;
+
+  const y1 = event.clientY - bounds.top;
+  const y2 = bounds.bottom - bounds.top;
+  mouse.y = -(y1 / y2) * 2 + 1;
+
+  // Places it on the camera pointing to the mouse
+  raycaster.setFromCamera(mouse, camera);
+
+  // Casts a ray
+  return raycaster.intersectObjects(ifcModels);
+}
+
+function pick(event) {
+  const found = cast(event)[0];
+  if (found) {
+    const index = found.faceIndex;
+    const geometry = found.object.geometry;
+    const ifc = ifcLoader.ifcManager;
+    const id = ifc.getExpressId(geometry, index);
+    console.log(id);
+  }
+}
+
+threeCanvas.ondblclick = pick;
+
+// Creates subset material
+const preselectMat = new MeshLambertMaterial({
+  transparent: true,
+  opacity: 0.6,
+  color: 0xff88ff,
+  depthTest: false,
+});
+
+// Create highlight effect
+const ifc = ifcLoader.ifcManager;
+
+// Reference to the previous selection
+let preselectModel = { id: -1 };
+
+function highlight(event, material, model) {
+  const found = cast(event)[0];
+  if (found) {
+    // Gets model ID
+    model.id = found.object.modelID;
+
+    // Gets Express ID
+    const index = found.faceIndex;
+    const geometry = found.object.geometry;
+    const id = ifc.getExpressId(geometry, index);
+
+    // Creates subset
+    ifcLoader.ifcManager.createSubset({
+      modelID: model.id,
+      ids: [id],
+      material: material,
+      scene: scene,
+      removePrevious: true,
+    });
+  } else {
+    // Removes previous highlight
+    ifc.removeSubset(model.id, material);
+  }
+}
+
+window.onmousemove = (event) => highlight(event, preselectMat, preselectModel);

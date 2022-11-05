@@ -40597,6 +40597,112 @@ class InstancedInterleavedBuffer extends InterleavedBuffer {
 
 InstancedInterleavedBuffer.prototype.isInstancedInterleavedBuffer = true;
 
+class Raycaster {
+
+	constructor( origin, direction, near = 0, far = Infinity ) {
+
+		this.ray = new Ray( origin, direction );
+		// direction is assumed to be normalized (for accurate distance calculations)
+
+		this.near = near;
+		this.far = far;
+		this.camera = null;
+		this.layers = new Layers();
+
+		this.params = {
+			Mesh: {},
+			Line: { threshold: 1 },
+			LOD: {},
+			Points: { threshold: 1 },
+			Sprite: {}
+		};
+
+	}
+
+	set( origin, direction ) {
+
+		// direction is assumed to be normalized (for accurate distance calculations)
+
+		this.ray.set( origin, direction );
+
+	}
+
+	setFromCamera( coords, camera ) {
+
+		if ( camera && camera.isPerspectiveCamera ) {
+
+			this.ray.origin.setFromMatrixPosition( camera.matrixWorld );
+			this.ray.direction.set( coords.x, coords.y, 0.5 ).unproject( camera ).sub( this.ray.origin ).normalize();
+			this.camera = camera;
+
+		} else if ( camera && camera.isOrthographicCamera ) {
+
+			this.ray.origin.set( coords.x, coords.y, ( camera.near + camera.far ) / ( camera.near - camera.far ) ).unproject( camera ); // set origin in plane of camera
+			this.ray.direction.set( 0, 0, - 1 ).transformDirection( camera.matrixWorld );
+			this.camera = camera;
+
+		} else {
+
+			console.error( 'THREE.Raycaster: Unsupported camera type: ' + camera.type );
+
+		}
+
+	}
+
+	intersectObject( object, recursive = true, intersects = [] ) {
+
+		intersectObject( object, this, intersects, recursive );
+
+		intersects.sort( ascSort );
+
+		return intersects;
+
+	}
+
+	intersectObjects( objects, recursive = true, intersects = [] ) {
+
+		for ( let i = 0, l = objects.length; i < l; i ++ ) {
+
+			intersectObject( objects[ i ], this, intersects, recursive );
+
+		}
+
+		intersects.sort( ascSort );
+
+		return intersects;
+
+	}
+
+}
+
+function ascSort( a, b ) {
+
+	return a.distance - b.distance;
+
+}
+
+function intersectObject( object, raycaster, intersects, recursive ) {
+
+	if ( object.layers.test( raycaster.layers ) ) {
+
+		object.raycast( raycaster, intersects );
+
+	}
+
+	if ( recursive === true ) {
+
+		const children = object.children;
+
+		for ( let i = 0, l = children.length; i < l; i ++ ) {
+
+			intersectObject( children[ i ], raycaster, intersects, true );
+
+		}
+
+	}
+
+}
+
 /**
  * Ref: https://en.wikipedia.org/wiki/Spherical_coordinate_system
  *
@@ -104309,10 +104415,19 @@ window.addEventListener("resize", () => {
 
 // Sets up the IFC loading
 const ifcLoader = new IFCLoader();
-ifcLoader.ifcManager.setWasmPath("../wasm/");
+ifcLoader.ifcManager.setupThreeMeshBVH(computeBoundsTree, disposeBoundsTree, acceleratedRaycast); // Sets up optimized picking
+const ifcModels = []; // Container to store the IFC models
+
+async function loadIFC(ifcPath){
+  await ifcLoader.ifcManager.setWasmPath("../wasm/");
+  ifcLoader.load(ifcPath, (ifcModel) => {
+    ifcModels.push(ifcModel);
+    scene.add(ifcModel);
+  });
+}
 
 // Load ifc file from local
-ifcLoader.load("models/example.ifc", (ifcModel) => scene.add(ifcModel));
+loadIFC("models/example.ifc");
 
 // Load ifc file from input button
 const input = document.getElementById("file-input");
@@ -104321,7 +104436,85 @@ input.addEventListener(
   (changed) => {
     const file = changed.target.files[0];
     var ifcURL = URL.createObjectURL(file);
-    ifcLoader.load(ifcURL, (ifcModel) => scene.add(ifcModel));
+    loadIFC(ifcURL);
   },
   false
 );
+
+// Create a function for the Raycaster to cast rays, calculating the position of the mouse on the screen
+const raycaster = new Raycaster();
+raycaster.firstHitOnly = true;
+const mouse = new Vector2$1();
+
+function cast(event) {
+  // Computes the position of the mouse on the screen
+  const bounds = threeCanvas.getBoundingClientRect();
+
+  const x1 = event.clientX - bounds.left;
+  const x2 = bounds.right - bounds.left;
+  mouse.x = (x1 / x2) * 2 - 1;
+
+  const y1 = event.clientY - bounds.top;
+  const y2 = bounds.bottom - bounds.top;
+  mouse.y = -(y1 / y2) * 2 + 1;
+
+  // Places it on the camera pointing to the mouse
+  raycaster.setFromCamera(mouse, camera);
+
+  // Casts a ray
+  return raycaster.intersectObjects(ifcModels);
+}
+
+function pick(event) {
+  const found = cast(event)[0];
+  if (found) {
+    const index = found.faceIndex;
+    const geometry = found.object.geometry;
+    const ifc = ifcLoader.ifcManager;
+    const id = ifc.getExpressId(geometry, index);
+    console.log(id);
+  }
+}
+
+threeCanvas.ondblclick = pick;
+
+// Creates subset material
+const preselectMat = new MeshLambertMaterial({
+  transparent: true,
+  opacity: 0.6,
+  color: 0xff88ff,
+  depthTest: false,
+});
+
+// Create highlight effect
+const ifc = ifcLoader.ifcManager;
+
+// Reference to the previous selection
+let preselectModel = { id: -1 };
+
+function highlight(event, material, model) {
+  const found = cast(event)[0];
+  if (found) {
+    // Gets model ID
+    model.id = found.object.modelID;
+
+    // Gets Express ID
+    const index = found.faceIndex;
+    const geometry = found.object.geometry;
+    const id = ifc.getExpressId(geometry, index);
+
+    // Creates subset
+    ifcLoader.ifcManager.createSubset({
+      modelID: model.id,
+      ids: [id],
+      material: material,
+      scene: scene,
+      removePrevious: true,
+    });
+  } else {
+    // Removes previous highlight
+    ifc.removeSubset(model.id, material);
+  }
+}
+
+window.onmousemove = (event) => highlight(event, preselectMat, preselectModel);
