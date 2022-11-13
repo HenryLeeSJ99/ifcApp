@@ -147,3 +147,14 @@ margin: 10px;
   height : 30px;
   width: auto;
 }
+
+.output {
+  background-color: #A0BCC2;
+}
+
+.resultContainer{
+  padding: 0;
+  margin: 50px 0px 0px 0px;
+  justify-content: center;
+  align-self: center;
+}

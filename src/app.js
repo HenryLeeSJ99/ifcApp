@@ -4,6 +4,8 @@ import { IFCLoader } from "web-ifc-three/IFCLoader";
 import { Raycaster, Vector2, MeshLambertMaterial } from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree} from "three-mesh-bvh";
 
+
+//Set Up three.js scene*******************************************************************************************************************************
 //Creates the Three.js scene
 const scene = new Scene();
 
@@ -74,6 +76,8 @@ window.addEventListener("resize", () => {
   renderer.setSize(size.width, size.height);
 });
 
+
+//IFC Loader*****************************************************************************************************************************************
 // Sets up the IFC loading
 const ifcLoader = new IFCLoader();
 ifcLoader.ifcManager.setupThreeMeshBVH(computeBoundsTree, disposeBoundsTree, acceleratedRaycast); // Sets up optimized picking
@@ -88,7 +92,7 @@ async function loadIFC(ifcPath){
 }
 
 // Load ifc file from local
-loadIFC("models/example.ifc");
+loadIFC("models/Revit_sample.ifc");
 
 // Load ifc file from input button
 const input = document.getElementById("file-input");
@@ -126,14 +130,22 @@ function cast(event) {
   return raycaster.intersectObjects(ifcModels);
 }
 
-function pick(event) {
+async function pick(event) {
   const found = cast(event)[0];
   if (found) {
     const index = found.faceIndex;
     const geometry = found.object.geometry;
     const ifc = ifcLoader.ifcManager;
     const id = ifc.getExpressId(geometry, index);
+    const modelID = found.object.modelID;
+    const props = await ifc.getItemProperties(modelID, id);
+    const type = await ifc.getTypeProperties(modelID, id);
+    document.getElementsByClassName("output")[0].innerHTML = `modelID= ${modelID}\nid= ${id}\ntype= ${type}`;
+    console.log(JSON.stringify(props, null, 2));
+    console.log(modelID);
     console.log(id);
+    console.log(geometry);
+    console.log(type);
   }
 }
 
