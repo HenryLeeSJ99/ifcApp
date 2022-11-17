@@ -3,6 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { IFCLoader } from "web-ifc-three/IFCLoader";
 import { Raycaster, Vector2, MeshLambertMaterial } from "three";
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree} from "three-mesh-bvh";
+import { IFCWALLSTANDARDCASE, IFCSLAB, IFCDOOR, IFCWINDOW, IFCFURNISHINGELEMENT, IFCMEMBER, IFCPLATE } from "web-ifc";
 
 
 //Set Up three.js scene*******************************************************************************************************************************
@@ -85,14 +86,14 @@ const ifcModels = []; // Container to store the IFC models
 
 async function loadIFC(ifcPath){
   await ifcLoader.ifcManager.setWasmPath("../wasm/");
-  ifcLoader.load(ifcPath, (ifcModel) => {
+  ifcLoader.load(ifcPath, async (ifcModel) => {
     ifcModels.push(ifcModel);
-    scene.add(ifcModel);
+    await setupAllCategories();
   })
 }
 
 // Load ifc file from local
-loadIFC("models/Revit_sample.ifc");
+// loadIFC("models/Revit_sample.ifc");
 
 // Load ifc file from input button
 const input = document.getElementById("file-input");
@@ -139,13 +140,15 @@ async function pick(event) {
     const id = ifc.getExpressId(geometry, index);
     const modelID = found.object.modelID;
     const props = await ifc.getItemProperties(modelID, id);
-    const type = await ifc.getTypeProperties(modelID, id);
-    document.getElementsByClassName("output")[0].innerHTML = `modelID= ${modelID}\nid= ${id}\ntype= ${type}`;
+    const type = await ifc.getIfcType(modelID, id);
+    const material = await ifc.getMaterialsProperties(modelID, id);
+    document.getElementsByClassName("output")[0].innerHTML = `modelID = ${modelID} <br> id = ${id} <br> type = ${type} <br> material = ${material}`;
     console.log(JSON.stringify(props, null, 2));
     console.log(modelID);
     console.log(id);
     console.log(geometry);
     console.log(type);
+    console.log(material);
   }
 }
 
@@ -191,3 +194,69 @@ function highlight(event, material, model) {
 }
 
 window.onmousemove = (event) => highlight(event, preselectMat, preselectModel);
+
+// List of categories names
+const categories = {
+  IFCWALLSTANDARDCASE,
+  IFCSLAB,
+  IFCFURNISHINGELEMENT,
+  IFCDOOR,
+  IFCWINDOW,
+  IFCPLATE,
+  IFCMEMBER,
+}
+
+// Gets the name of a category
+function getName(category) {
+  const names = Object.keys(categories);
+  return names.find((name) => categories[name] === category);
+}
+
+// Gets the IDs of all the items of a specific category
+async function getAll(category) {
+  const manager = ifcLoader.ifcManager;
+  return manager.getAllItemsOfType(0, category, false);
+}
+
+// Creates a new subset containing all elements of a category
+async function newSubsetOfType(category) {
+  const ids = await getAll(category);
+  return ifcLoader.ifcManager.createSubset({
+    modelID: 0,
+    scene,
+    ids,
+    removePrevious: true,
+    customID: category.toString(),
+  });
+}
+
+// Stores the created subsets
+const subsets = {};
+
+async function setupAllCategories() {
+  const allCategories = Object.values(categories);
+  for (let i = 0; i < allCategories.length; i++) {
+    const category = allCategories[i];
+    await setupCategory(category);
+  }
+}
+
+// Creates a new subset and configures the checkbox
+async function setupCategory(category) {
+  subsets[category] = await newSubsetOfType(category);
+  setupCheckBox(category);
+}
+
+// Sets up the checkbox event to hide / show elements
+function setupCheckBox(category) {
+  const name = getName(category);
+  const checkBox = document.getElementById(name);
+  checkBox.addEventListener("change", (event) => {
+    console.log("This informatio  +" + name);
+    const checked = event.target.checked;
+    const subset = subsets[category];
+    if (checked) scene.add(subset);
+    else subset.removeFromParent();
+  });
+}
+
